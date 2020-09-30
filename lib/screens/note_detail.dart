@@ -1,27 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:note_keeper/models/notes.dart';
+import 'package:note_keeper/utils/database_helper.dart';
 
 class NoteDetail extends StatefulWidget {
-  String appbarTitle;
+  final String appbarTitle;
+  final Note note;
 
-  NoteDetail(this.appbarTitle);
+  NoteDetail(this.note, this.appbarTitle);
 
   @override
   State<StatefulWidget> createState() {
-    return NoteDetailState(this.appbarTitle);
+    return NoteDetailState(this.note, this.appbarTitle);
   }
 }
 
 class NoteDetailState extends State<NoteDetail> {
   static var _priorities = ['High', 'Low'];
+  Note note;
   TextEditingController titleController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
   String appbarTitle;
 
-  NoteDetailState(this.appbarTitle);
+  DatabaseHelper databaseHelper = DatabaseHelper();
+
+  NoteDetailState(this.note, this.appbarTitle);
 
   @override
   Widget build(BuildContext context) {
     TextStyle textStyle = Theme.of(context).textTheme.title;
+    titleController.text = note.title;
+    descriptionController.text = note.date;
     // TODO: implement build
     return WillPopScope(
         onWillPop: () {
@@ -51,10 +60,11 @@ class NoteDetailState extends State<NoteDetail> {
                       );
                     }).toList(),
                     style: textStyle,
-                    value: 'Low',
+                    value: getPriorityAsString(note.priority),
                     onChanged: (valueSelectedByUser) {
                       setState(() {
                         debugPrint('User Selected $valueSelectedByUser');
+                        updatePriorityAsInt(valueSelectedByUser);
                       });
                     },
                   ),
@@ -67,6 +77,7 @@ class NoteDetailState extends State<NoteDetail> {
                     style: textStyle,
                     onChanged: (value) {
                       debugPrint('Something change in Title Text field');
+                      updateTitle();
                     },
                     decoration: InputDecoration(
                       labelText: 'Title',
@@ -84,6 +95,7 @@ class NoteDetailState extends State<NoteDetail> {
                     style: textStyle,
                     onChanged: (value) {
                       debugPrint('Something change in Description Text field');
+                      updateDescription();
                     },
                     decoration: InputDecoration(
                       labelText: 'Description',
@@ -109,6 +121,7 @@ class NoteDetailState extends State<NoteDetail> {
                           onPressed: () {
                             setState(() {
                               debugPrint('Save button clicked');
+                              _save();
                             });
                           },
                         ),
@@ -142,5 +155,59 @@ class NoteDetailState extends State<NoteDetail> {
 
   void moveToLastScreen() {
     Navigator.pop(context);
+  }
+
+  String updatePriorityAsInt(String value) {
+    switch (value) {
+      case 'High':
+        note.priority = 1;
+        break;
+      case 'Low':
+        note.priority = 2;
+        break;
+    }
+  }
+
+  String getPriorityAsString(int value) {
+    String priority;
+    switch (value) {
+      case 1:
+        priority = _priorities[0];
+        break;
+      case 2:
+        priority = _priorities[1];
+        break;
+    }
+    return priority;
+  }
+
+  void updateTitle() {
+    note.title = titleController.text;
+  }
+
+  void updateDescription() {
+    note.description = descriptionController.text;
+  }
+
+  void _save() async {
+    moveToLastScreen();
+    note.date = DateFormat.yMMMd().format(DateTime.now());
+    int result;
+    if (note.id != null) {
+      result = await databaseHelper.updateNote(note);
+    } else {
+      result = await databaseHelper.insertNote(note);
+    }
+    if (result != 0) {
+      _showAlertDialog('Status', 'Note Saved Successfully!');
+    } else {
+      _showAlertDialog('Status', 'Problem Saving Note');
+    }
+  }
+
+  void _showAlertDialog(String title, String message) {
+    AlertDialog alertDialog =
+        AlertDialog(title: Text(title), content: Text(message));
+    showDialog(context: context, builder: (_) => alertDialog);
   }
 }

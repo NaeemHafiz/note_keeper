@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:note_keeper/models/notes.dart';
 import 'package:note_keeper/screens/note_detail.dart';
+import 'package:note_keeper/utils/database_helper.dart';
+import 'package:sqflite/sqflite.dart';
 
 class NoteList extends StatefulWidget {
   @override
@@ -9,10 +12,16 @@ class NoteList extends StatefulWidget {
 }
 
 class NoteListState extends State<NoteList> {
+  DatabaseHelper databaseHelper = DatabaseHelper();
+  List<Note> noteList;
   int count = 0;
 
   @override
   Widget build(BuildContext context) {
+    if (noteList == null) {
+      noteList = List<Note>();
+      updateListView();
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text('Notes'),
@@ -20,7 +29,7 @@ class NoteListState extends State<NoteList> {
       body: getNoteLsitView(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          navigateToDetatil('Add Note');
+          navigateToDetatil(Note('', '', 2), 'Add Note');
         },
         tooltip: 'Add Note',
         child: Icon(Icons.add),
@@ -42,13 +51,18 @@ class NoteListState extends State<NoteList> {
               child: Icon(Icons.keyboard_arrow_right),
             ),
             title: Text(
-              'Dummy Title',
+              this.noteList[position].title,
               style: titleStyle,
             ),
-            subtitle: Text('Dummy Date'),
-            trailing: Icon(Icons.delete, color: Colors.grey),
+            subtitle: Text(this.noteList[position].date),
+            trailing: GestureDetector(
+              child: Icon(Icons.delete, color: Colors.grey),
+              onTap: () {
+                _delete(context, noteList[position]);
+              },
+            ),
             onTap: () {
-              navigateToDetatil('Edit Note');
+              navigateToDetatil(this.noteList[position], 'Edit Note');
             },
           ),
         );
@@ -56,9 +70,58 @@ class NoteListState extends State<NoteList> {
     );
   }
 
-  void navigateToDetatil(String title) {
+  void navigateToDetatil(Note note, String title) {
     Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return NoteDetail(title);
+      return NoteDetail(note, title);
     }));
+  }
+
+  Color getPriorityColor(int priority) {
+    switch (priority) {
+      case 1:
+        return Colors.red;
+        break;
+      case 2:
+        return Colors.yellow;
+        break;
+      default:
+        Colors.yellow;
+    }
+  }
+
+  void _delete(BuildContext context, Note note) async {
+    int result = await databaseHelper.deleteNote(note.id);
+
+    if (result != 0) {
+      _showSnackbar(context, 'Note Deleted Successfully!');
+      updateListView();
+    }
+  }
+
+  void _showSnackbar(BuildContext context, String message) {
+    final snackbar = SnackBar(content: Text(message));
+    Scaffold.of(context).showSnackBar(snackbar);
+  }
+
+  Icon getPriorityIcon(int priority) {
+    switch (priority) {
+      case 1:
+        return Icon(Icons.play_arrow);
+        break;
+      case 2:
+        return Icon(Icons.play_arrow);
+        break;
+      default:
+        Colors.yellow;
+    }
+  }
+
+  void updateListView() async {
+    await databaseHelper.initializeDatabase();
+    List<Note> noteListFuture = await databaseHelper.getNoteList();
+    setState(() {
+      this.noteList = noteListFuture;
+      this.count = noteListFuture.length;
+    });
   }
 }
