@@ -1,4 +1,6 @@
-class Note {
+import 'package:get/get.dart';
+
+class Note extends GetxController {
   int _id;
   String _title;
   String _date;
