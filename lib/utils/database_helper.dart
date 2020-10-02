@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:note_keeper/models/notes.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite/sqlite_api.dart';
 
 class DatabaseHelper {
   static DatabaseHelper _databaseHelper; //Singleton Database Helper
